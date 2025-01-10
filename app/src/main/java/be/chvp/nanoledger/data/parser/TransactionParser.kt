@@ -42,17 +42,34 @@ val commentRegex = Regex(";.*$")
 val postingSplitRegex = Regex("[ \\t]{2,}")
 
 fun extractPosting(line: String): Posting? {
-    val stripped = line.trim().replace(commentRegex, "")
-    if (stripped.length == 0) {
-        return null
+    // the three components of a posting
+    var account: String? = null
+    var amount: Amount? = null
+    var note: String? = null
+
+    val trimmed = line.trim()
+
+    // check if we have a note in the posting
+    val commentMatch = commentRegex.find(trimmed)
+    if (commentMatch != null) {
+        note = commentMatch.value
     }
 
-    val components = stripped.split(postingSplitRegex, limit = 2)
-    if (components.size == 1) {
-        return Posting(components[0], null)
+    // trim again the string after removing the comment, as we don't know
+    // if between the comment and the amount there is any white space
+    val stripped = trimmed.replace(commentRegex, "").trim()
+    // if we have more content than just a note, continue parsing
+    if (stripped.isNotEmpty()) {
+        val components = stripped.split(postingSplitRegex, limit = 2)
+        account = components[0]
+
+        // if we have more than the account, is the amount of the posting, parse it
+        if (components.size > 1) {
+            amount = extractAmount(components[1].trim())
+        }
     }
 
-    return Posting(components[0], extractAmount(components[1].trim()))
+    return Posting(account, amount, note)
 }
 
 val assertionRegex = Regex("=.*$")
